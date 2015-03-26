@@ -230,4 +230,20 @@ public class RNBTree {
 		results.add(accuracy);
 		return results;
 	}
+	
+	public double predInstance(Instance d) throws Exception {
+		if (this.isLeaf()) {
+			double label = this.nbm.classifyInstance(d);
+			return label;
+			
+		}
+		else {
+			double label = this.nbm.classifyInstance(d);
+			if (label == 0.0) {
+				return this.children().get(0).nbm.classifyInstance(d);
+			} else {
+				return this.children().get(1).nbm.classifyInstance(d);
+			}
+		}
+	}
 }

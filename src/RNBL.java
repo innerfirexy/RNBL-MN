@@ -1,8 +1,11 @@
+import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 import weka.core.converters.CSVLoader;
 import weka.core.converters.ArffSaver;
 import weka.classifiers.bayes.NaiveBayesMultinomial;
+import weka.filters.Filter;
+import weka.filters.unsupervised.attribute.StringToWordVector;
 
 import java.util.*;
 import java.io.*;
@@ -33,6 +36,12 @@ public class RNBL {
 			source = new DataSource(dir + head + "_vector_test.arff");
 			test = source.getDataSet();
 			test.setClassIndex(test.numAttributes()-1);
+			// apply filter
+//			StringToWordVector filter = new StringToWordVector();
+//			filter.setInputFormat(train);
+//			train = Filter.useFilter(train, filter);
+//			filter.setInputFormat(test);
+//			test = Filter.useFilter(test, filter);
 		}
 		catch (Exception e) {
 			System.out.println("Error in loading data!");
@@ -158,12 +167,14 @@ public class RNBL {
 //			exp.convertData(csv_file, arff_file);
 //		}
 		
+		
 		// split arff files
 //		for (int i = 0; i < file_header.length; i++) {
 //			String input_file = arff_dir + file_header[i] + "_vector.arff";
 //			System.out.println(input_file);
 //			exp.splitData(input_file, train_size[i], test_size[i]);
 //		}	
+		
 		
 		// experiment
 		for (String head : file_header) {
@@ -172,7 +183,7 @@ public class RNBL {
 			double prevCMDL = Double.NEGATIVE_INFINITY;
 			double CMDL = exp.tree.computeCMDL();
 			
-//			System.out.println("Experiment with " + head);
+			// build the tree
 			while (prevCMDL <= CMDL) {
 				prevCMDL = CMDL;
 				exp.tree.stepGrow();
@@ -183,9 +194,32 @@ public class RNBL {
 			CMDL = exp.tree.computeCMDL();
 			System.out.println("Tree size: " + String.valueOf(exp.tree.numNode()) + ", CMDL: " + String.valueOf(CMDL));
 			
-			ArrayList<Double> res = exp.tree.evaluate();
-			System.out.println(head + " accuracy: " + String.valueOf(res.get(3)));
-		}
+
+			// evaluate on test set
+			double tp = 0, fp = 0, tn = 0, fn = 0;
+			for (int i = 0; i < exp.test.numInstances(); i++) {
+				Instance ins = exp.test.instance(i);
+				double label = ins.classValue();
+				double pred = exp.tree.predInstance(ins);
+				if (pred == 0.0) {
+					if (label == 0.0) {
+						tn += 1;
+					} else {
+						fn += 1;
+					}
+				} else { // pred == 1.0
+					if (label == 1.0) {
+						tp += 1;
+					} else {
+						fp += 1;
+					}
+				}
+			}
+			double accuracy = (tp + tn) / (tp + fp + tn + fn);
+			System.out.println(head + " accuracy: " + String.valueOf(accuracy));
+			
+		} // end of experiment
+		
 	}
 
 }
